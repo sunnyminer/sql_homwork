@@ -1,0 +1,558 @@
+--1.	检索年龄大于20岁的女学生的学号和姓名。
+select sno,sname 
+from student 
+where age>20;
+
+
+--2.	检索姓名以王打头的所有学生的姓名和年龄。
+select sname,age
+from student 
+where sname like '王%';
+
+--3.	查询姓名为‘X国X’同学。
+select *
+from student 
+where sname like '_国_';
+
+--4.	在SC中检索成绩为空值的学生学号和课程号。
+select sno,cno
+from sc
+where grade is null;
+
+--5.	输出c01 课程的成绩单，要求成绩按从高到低排序。
+select *
+from sc
+where sc.cno='c01'
+order by grade desc;
+
+--6.	求选修C04课程的学生的平均分。
+
+select --sno,
+AVG(grade)
+from sc
+where cno ='c04'
+--group by sno;
+
+--7.	每个学生选修的课程门数。
+select sno,COUNT(cno)
+from sc
+group by sno; 
+--8.	检索至少选修两门课程的学生学号。
+select sno 
+from sc
+group by sno
+having COUNT(*)>=2;
+--9.	求每个学生平均成绩。
+select sno,AVG(grade)
+from sc
+group by sno;
+--10.	统计每门课程的学生选修人数(超过3人的课程才统计)。
+--查询结果按人数降序排列，若人数相同，按课程号升序排列。
+select cno,COUNT(sno)
+from sc
+group by cno
+having COUNT(*)>3
+order by COUNT(sno) desc,cno asc;
+
+--11.	检索每个学生的总学分
+select sno,sum(credit)
+from sc,course
+where sc.cno = course.cno
+group by sno;
+
+--12.	检索计算机系开课程的课程号和课程名。
+select cno,cname
+from course,department
+where course.deptNo=department.deptNo
+	and department.deptName='计算机';
+--13.	检索选修C语言且成绩不及格的计算机系的学生的姓名与学号。
+*select sname,sno
+from student,department
+where student.dept=department.deptNo
+	and department.deptName='计算机'
+	and student.sno in(
+	select sno
+	from sc,course
+	where sc.cno=course.cno
+	and sc.grade<60
+	and course.cname='C语言'
+	);
+
+--14.	求计算机系所开课程的每门课程的学生平均成绩，
+--按平均成绩从高到低排序输出。
+select sc.cno,avg(grade)
+from course,sc,department
+where course.cno=sc.cno
+AND department.deptNo=course.deptNo
+and department .deptName='计算机'
+group by sc.cno
+order by AVG(grade)desc;
+
+
+--15.	检索缺考或不及格门数3门以上的学生学号和姓名。
+select sno,sname 
+from student
+where sno in 
+(select sno
+from sc
+where grade is null or grade <60
+group by sno
+having COUNT(*)>=3
+);
+
+--16.	查询选修3门以上课程且平均成绩大于80的学生的学号
+
+select sno
+from sc
+group by sno
+having COUNT(*)>=3
+ and AVG(grade)>80;
+
+--17.	查询选修3门以上课程且平均成绩大于80的学生的学号、姓名、
+--所在系名。
+select sno,sname,deptName
+from student,department 
+where student.dept=department.deptNo
+and sno in
+(select sno from sc
+group by sc.sno
+having COUNT(*)>=3
+ and AVG(grade)>80);
+--18.	检索缺考2门以上的学生姓名。
+
+select sname from student
+where 2<=any
+(select count(*)
+from sc 
+where sc.sno = student.sno
+and  grade is null
+group by sno);
+ 
+--19.	检索王丽同学所学课程的课程号和课程名。
+select cno,cname
+from course
+where cno in
+(select cno
+from sc,student
+where sc.sno=student.sno
+and student.sname = '王丽'
+);
+--20.	检索选修‘c01’课程的女学生的姓名（使用子查询）
+
+select sname
+from student
+where student.sex='女'
+and sno in
+(select sno 
+from sc
+where cno='c01'
+);
+
+--21.	检索学号比王丽同学小，而年龄比她大的学生姓名
+
+select stx.sname 
+from student stx,student sty
+where sty.sname='王丽'
+and stx.age>sty.age
+and stx.sno<sty.sno;
+
+--22.	检索s01同学不学的课程的课程号。
+
+select cno
+from sc scx
+where not exists
+(
+select * from sc  where sno='s01'and cno=scx.cno
+);
+
+select cno
+from sc scx
+where not exists 
+(select *
+from sc scy
+where scx.cno=scy.cno
+and scy.sno = 's01'
+);
+
+--23.	检索王丽同学不学的课程的课程号。（in和exists两种方法）
+-- exists 方法
+select distinct cno 
+from sc scx 
+where not exists 
+(select * 
+from sc scy,student 
+where scx.cno=scy.cno
+and scy.sno = student.sno
+and student.sname= '王丽'
+);
+
+--in 方法
+select distinct cno 
+from sc
+where cno in
+(select cno from sc
+except
+select cno from sc,student
+where sc.sno = student.sno and student.sname = '王丽'
+);
+
+--24.	检索至少选修计算机系所开课程2门以上的女学生姓名
+select sname 
+from student
+where sex = '女'
+and sno in
+(select sno 
+from sc 
+where  2< any
+(select COUNT(*)
+from sc
+
+where cno in 
+(select cno
+from course,department
+where course.deptNo=department.deptNo
+and department.deptName='计算机'
+)
+group by sno 
+)
+)
+
+--25.	查询没有选修c02，c03，c04的同学的学号。（使用子查询和集合运算两种方法实现）
+
+--子查询
+select sno
+from student
+where not exists
+(select *
+from course
+where course.cno in ('c02','c03','c04')
+and  exists
+(
+select *
+from sc
+where cno= course.cno and 
+sno=student.sno
+)
+);
+
+select distinct sno
+from student 
+where  not exists
+(select *
+from sc
+where  sc.sno=student.sno
+and (cno='c02' or cno='c03' or cno='c04')
+) ;
+--集合
+select sno
+from student
+except
+select sno
+from sc
+where cno='c02' or cno='c03' or cno='c04';
+
+--26.	查询既选修了‘数据库’又选修了‘操作系统’的学生的姓名及学号（使用子查询和集合运算两种方法实现）
+
+select sname,sno
+from student
+where sno in
+(select sno
+from sc,course
+where sc.cno=course.cno
+and course.cname='数据库'
+)
+and sno in
+(select sno
+from sc,course
+where sc.cno=course.cno
+and course.cname='操作系统'
+);
+
+select sname,sno
+from student
+where  not exists(
+select * 
+from course
+where( course.cname='数据库'or course.cname='操作系统')
+and  not exists
+(select *
+from sc
+where sc.cno=course.cno
+and sc.sno = student.sno
+)
+);
+
+
+select student.sname,student.sno
+from sc,student,course
+where sc.sno=student.sno
+and sc.cno=course.cno
+and course.cname='数据库'
+intersect 
+select student.sname,student.sno
+from sc,student,course
+where sc.sno=student.sno
+and sc.cno=course.cno
+and course.cname='操作系统';
+
+
+--27.	查询即没有选修‘数据库’又没有选修‘操作系统’的学生的姓名及学号。（使用子查询和集合运算两种方法实现）
+
+select distinct sname,sno
+from student 
+where sno not in
+(select sno
+from sc 
+where cno in 
+(select cno
+from course
+where cname='数据库'or cname='操作系统'));
+
+select sname,sno
+from student 
+where  not exists
+(select *
+from sc,course
+where sc.sno=student.sno
+and sc.cno=course.cno
+and (course.cname='操作系统' or course.cname='数据库'  )
+)
+
+select sname,sno
+from student
+except
+select student.sname,student.sno
+from sc,student,course
+where sc.sno=student.sno
+and sc.cno=course.cno
+and course.cname='操作系统'
+except
+select student.sname,student.sno
+from sc,student,course
+where sc.sno=student.sno
+and sc.cno=course.cno
+and course.cname='数据库';
+
+--28.	检索选修了全部课程的学生的学号与姓名。
+
+select sno,sname
+from student 
+where not exists
+(select * 
+from course
+where  not exists 
+(select *
+from sc
+where course.cno=sc.cno
+and student.sno=sc.sno
+)
+);
+
+--29.	检索选修计算机系所开全部课程的学生的学号与姓名。
+
+select sno,sname 
+from student
+where not exists
+(select *
+from course,department
+where course.deptNo=department.deptNo
+and department.deptName='计算机'
+and not exists
+(select *
+from sc
+where student.sno=sno and course.cno = cno
+)
+);
+
+select sno,sname
+from student
+where not exists
+(select *
+from course,department
+where course.deptNo=department.deptNo
+and department.deptName='计算机'
+and not exists
+(select *
+from sc
+where sc.cno=course.cno
+and sc.sno=student.sno
+)
+);
+
+--30.	检索计算机系同学与男同学的交集（即检索计算机系男同学，交运算）
+select sno,sname
+from student,department
+where student.dept=department.deptNo
+and department.deptName='计算机'
+intersect
+select sno,sname
+from student 
+where student.sex='男';
+
+--31.	检索没有同学选修的课程号（差运算）
+
+select cno
+from course
+except
+select distinct cno
+from sc
+--32.	检索选修了计算机系或者信息系所开课程的同学的学号，按学号降序排列（并运算）
+
+select sno
+from department,sc,course
+where sc.cno=course.cno
+and course.deptNo=department.deptNo
+and department.deptName='计算机'
+union
+select sno
+from department,sc,course
+where sc.cno=course.cno
+and course.deptNo=department.deptNo
+and department.deptName='信息'
+order by sno desc;
+
+
+--33.创建一个计算机系的学生表studentCS，并将student表中计算机系的同学记录插入新表中。
+create table studentCS
+(sno char(8) primary key,
+ sname char(8) ,
+ age int,
+ sex char(2),
+ dept int
+);
+insert into studentCS(sno,sname,age,sex,dept)
+select *
+from student
+where dept=
+(select deptNo
+from department
+where department.deptName='计算机'
+);
+
+--34.更新选课表中数据库课程的成绩，根据公式：成绩*80+20。
+
+update sc
+set grade=grade*80+20
+where cno=
+(select cno
+from course
+where cname='数据库');
+
+
+--35.删除成绩为空的记录。
+delete from sc
+where grade is null;
+
+
+--36.建立计算机系的学生信息视图CS_Student。
+
+create view CS_Student
+as 
+select sno,sname,age,sex
+from student
+where dept=
+(select deptNo
+from department
+where deptName='计算机'
+);
+
+--37.建立计算机系平均成绩在85分以上的学生视图CS_Aver85,包含sno,dept,avergrade。
+
+--create view  CS_Aver85 (sno,dept,avergrade)
+--as
+
+select sc.sno,dept,AVG(grade)
+from student,sc,department
+group by sc.sno,student.dept,department.deptNo,department.deptName,student.sno
+having 85<=  AVG(grade)
+and student.dept=department.deptNo 
+and department.deptName='计算机'
+and student.sno=sc.sno
+;
+
+select student.sno,dept,AVG(grade)
+from student,sc,department
+where 
+ student.sno=sc.sno
+and student.dept=department.deptNo
+and department.deptName='计算机'
+group by student.sno,student.dept
+having AVG(grade)>=85
+;
+
+--38.在视图CS_Student中查询20岁以上的学生信息。
+select *
+from CS_Student
+where age>=20;
+
+--39.将视图CS_Student中的朱岩同学的性别改为’女’
+update CS_Student 
+set sex='女'
+where sname = '朱岩';
+
+--40.向视图CS_Student中插入一名新生，学号为s20，姓名为李红，年龄为20岁的女生。
+insert into CS_Student
+values('s20','李红',20,'女');
+
+--41.删除视图CS_Student中李红同学的信息。
+delete from student
+where sname='李红';
+
+
+--授权与回收
+--42.创建一个新用户（通过界面操作即可），授予他student表的查询和修改的权限，然后再收回他的权限。
+ grant select 
+ on student
+ to yuyang;
+ 
+revoke select
+on  student
+from yuyang;
+--重新创建department和student表，加上check约束。
+--43. Department表中的deptNo字段的取值范围在1~20之间。
+create table department1
+(
+deptNo smallint check(deptNo between 1 and 20),
+deptname varchar(50),
+primary key(deptNo)
+)
+--44. student表中的sex字段时可以是‘男’或者‘女’
+create table student1
+(sno char(8) primary key,
+sname char(8),
+age int,
+sex char(2) check(sex in ('男','女')),
+dept int
+)
+
+--45.在department表中创建一个触发器，当插入新的记录时，
+--检查院系名称是否存在，如果不存在的话再进行插入
+
+create trigger checkname
+on department instead of insert
+as begin
+declare @deptname varchar(50),@deptno smallint
+select  @deptname =deptName,@deptno=deptNo from inserted
+if not exists(select *from department where deptName=@deptname)
+insert into department values(@deptno,@deptname)
+end
+;
+
+--46.在student表中增加一个字段avgGrade，当sc表中进行增删改操作时
+--都要重新计算平均成绩，写入student表的avgGrade字段。
+
+create trigger avggra
+on sc after insert,delete,update
+as
+begin
+declare @sno char(8)
+select @sno = sno from inserted
+update student
+set avgGrade=
+(select avg(sc.grade)
+from sc
+where sc.sno=@sno
+)
+end
+;
+
