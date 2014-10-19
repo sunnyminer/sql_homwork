@@ -31,7 +31,7 @@ select --sno,
 AVG(grade)
 from sc
 where cno ='c04'
---group by sno;
+--group by sno; 
 
 --7.	每个学生选修的课程门数。
 select sno,COUNT(cno)
